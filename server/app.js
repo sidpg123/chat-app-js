@@ -202,6 +202,7 @@ io.on("connection", (socket) => {
         content: translatedMessage,
         sender: user._id,
         chat: chatId,
+        targetLanguage: targetLanguage,
       });
 
       await Message.create({

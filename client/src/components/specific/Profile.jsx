@@ -4,6 +4,7 @@ import {
   Face as FaceIcon,
   AlternateEmail as UserNameIcon,
   CalendarMonth as CalendarIcon,
+  Language,
 } from "@mui/icons-material";
 import moment from "moment";
 import { transformImage } from "../../lib/features";
@@ -32,6 +33,12 @@ const Profile = ({ user }) => {
         heading={"Joined"}
         text={moment(user?.createdAt).fromNow()}
         Icon={<CalendarIcon />}
+      />
+
+      <ProfileCard
+        heading={"Language"}
+        text={(user?.language)}
+        Icon={<Language />}
       />
     </Stack>
   );
