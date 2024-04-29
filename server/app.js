@@ -27,6 +27,8 @@ import userRoute from "./routes/user.js";
 import chatRoute from "./routes/chat.js";
 import adminRoute from "./routes/admin.js";
 import { log } from "console";
+import { TranslatedMessage } from "./models/translatedMessage.js";
+import { User } from "./models/user.js";
 
 dotenv.config({
   path: "./.env",
@@ -67,23 +69,6 @@ app.use("/api/v1/admin", adminRoute);
 
 // const axios = require('axios');
 
-async function detectLanguage(message) {
-  try {
-    const response = await axios.post('https://api.translateplus.io/v1/language_detect', {
-      text: message
-    }, {
-      headers: {
-        'X-API-KEY': '98e0df0cdd6d814cde9421d4cc8a8e24169fda75',
-        'Content-Type': 'application/json'
-      }
-    })
-    return response.data.language_detection.language;
-  } catch (error) {
-    console.error(error);
-    return message;
-  }
-}
-
 async function translateMessage(message, sourceLanguage, targetLanguage) {
   try {
     const response = await axios.post('https://api.translateplus.io/v1/translate', {
@@ -103,6 +88,23 @@ async function translateMessage(message, sourceLanguage, targetLanguage) {
   } catch (error) {
     console.error('Error translating message:');
     return message; // Return original message if translation fails
+  }
+}
+
+async function detectLanguage(message) {
+  try {
+    const response = await axios.post('https://api.translateplus.io/v1/language_detect', {
+      text: message
+    }, {
+      headers: {
+        'X-API-KEY': '98e0df0cdd6d814cde9421d4cc8a8e24169fda75',
+        'Content-Type': 'application/json'
+      }
+    })
+    return response.data.language_detection.language;
+  } catch (error) {
+    console.error(error);
+    return message;
   }
 }
 
@@ -126,20 +128,28 @@ io.on("connection", (socket) => {
   //  console.log(user);
   userSocketIDs.set(user._id.toString(), socket.id);
 
+
   socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
     const sourceLanguage = user.language;
     console.log("source", sourceLanguage);
+    const receiverIds = members.filter(member => member !== user._id.toString());
+    console.log("members:", members);
+    console.log("receivers:", receiverIds);
 
+    const receiver = await User.findById(receiverIds)
+    console.log('receiver', receiver);
+    const targetLanguage = receiver.language;
+    console.log('targetLanguage', targetLanguage);
     // Translate the message if necessary
-    const translatedMessage = (sourceLanguage !== 'en')
-      ? await translateMessage(message, sourceLanguage, 'en')
-      : message;
+    const translatedMessage =  await translateMessage(message, sourceLanguage, targetLanguage)  
 
     // Get the sender's socket ID
-    console.log("Translated message: ", translateMessage);
+    console.log("Translated message: ", translatedMessage);
     const senderSocketId = userSocketIDs.get(user._id.toString());
+    console.log("sender id", user._id.toString());
     console.log("sendersocket ", senderSocketId,);
     // Emit original message to the sender's socket
+
     await io.to(senderSocketId).emit(NEW_MESSAGE, {
       chatId,
       message: {
@@ -155,7 +165,7 @@ io.on("connection", (socket) => {
     });
 
     // Iterate through each member in the conversation
-    await Promise.all(members.map(async (member) => {
+    await Promise.all(receiverIds.map(async (member) => {
       // Translate the message if necessary
       console.log('member', member);
       const receiverSocketId = member ? userSocketIDs.get(member.toString()) : null;
@@ -183,13 +193,19 @@ io.on("connection", (socket) => {
     }));
 
     // Emit a new message alert to all members except the sender
-    const receiverIds = members.filter(member => member !== user._id);
+
     io.to(getSockets(receiverIds)).emit(NEW_MESSAGE_ALERT, { chatId });
 
     try {
       // Save the original message to the database
-      await Message.create({
+      await TranslatedMessage.create({
         content: translatedMessage,
+        sender: user._id,
+        chat: chatId,
+      });
+
+      await Message.create({
+        content: message,
         sender: user._id,
         chat: chatId,
       });

@@ -15,6 +15,7 @@ import {
 import { getOtherMember } from "../lib/helper.js";
 import { User } from "../models/user.js";
 import { Message } from "../models/message.js";
+import { TranslatedMessage } from "../models/translatedMessage.js";
 
 const newGroupChat = TryCatch(async (req, res, next) => {
   const { name, members } = req.body;
@@ -371,6 +372,36 @@ const deleteChat = TryCatch(async (req, res, next) => {
     message: "Chat deleted successfully",
   });
 });
+// Merge function for merge sort
+function mergeMessages(arr1, arr2) {
+  let merged = [];
+  let i = 0;
+  let j = 0;
+
+  while (i < arr1.length && j < arr2.length) {
+    if (arr1[i].createdAt > arr2[j].createdAt) {
+      merged.push(arr1[i]);
+      i++;
+    } else {
+      merged.push(arr2[j]);
+      j++;
+    }
+  }
+
+  // Push remaining elements from arr1 (if any)
+  while (i < arr1.length) {
+    merged.push(arr1[i]);
+    i++;
+  }
+
+  // Push remaining elements from arr2 (if any)
+  while (j < arr2.length) {
+    merged.push(arr2[j]);
+    j++;
+  }
+
+  return merged;
+}
 
 const getMessages = TryCatch(async (req, res, next) => {
   const chatId = req.params.id;
@@ -388,15 +419,28 @@ const getMessages = TryCatch(async (req, res, next) => {
       new ErrorHandler("You are not allowed to access this chat", 403)
     );
 
-  const [messages, totalMessagesCount] = await Promise.all([
+  const [originalMessages, translatedMessages, totalOriginalMessagesCount, totalTranslatedMessagesCount] = await Promise.all([
     Message.find({ chat: chatId })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(resultPerPage)
       .populate("sender", "name")
       .lean(),
+    TranslatedMessage.find({ chat: chatId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(resultPerPage)
+      .populate("sender", "name")
+      .lean(),
     Message.countDocuments({ chat: chatId }),
+    TranslatedMessage.countDocuments({ chat: chatId }),
   ]);
+
+  // Merge original and translated messages maintaining order
+  const messages = mergeMessages(originalMessages, translatedMessages);
+
+  // Calculate total count by adding counts from both collections
+  const totalMessagesCount = totalOriginalMessagesCount + totalTranslatedMessagesCount;
 
   const totalPages = Math.ceil(totalMessagesCount / resultPerPage) || 0;
 
@@ -406,6 +450,7 @@ const getMessages = TryCatch(async (req, res, next) => {
     totalPages,
   });
 });
+
 
 export {
   newGroupChat,

@@ -23,12 +23,6 @@ const schema = new Schema(
       required: true,
     },
 
-    receiver: {
-      type: Types.ObjectId,
-      ref: "User",
-      required: false,
-    },
-
     chat: {
       type: Types.ObjectId,
       ref: "Chat",
