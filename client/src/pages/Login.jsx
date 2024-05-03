@@ -284,10 +284,8 @@ const Login = () => {
                     <MenuItem value={"pa"}>Punjabi</MenuItem>
                     <MenuItem value={"or"}>Odia</MenuItem>
                     <MenuItem value={"as"}>Assamese</MenuItem>
-                    <MenuItem value={"mr"}>Maithili</MenuItem>
                     <MenuItem value={"sd"}>Sindhi</MenuItem>
                     <MenuItem value={"ne"}>Nepali</MenuItem>
-                    <MenuItem value={"mr"}>Marwari</MenuItem>
                     {/* Other Popular Languages */}
                     <MenuItem value={"en"}>English</MenuItem>
                     <MenuItem value={"es"}>Spanish</MenuItem>

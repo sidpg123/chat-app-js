@@ -28,10 +28,15 @@ const schema = new Schema(
       ref: "User",
       required: false,
     },
-
+      
     chat: {
       type: Types.ObjectId,
       ref: "Chat",
+      required: true,
+    },
+
+    targetLanguage: {
+      type: String, // Store the language code (e.g., 'en', 'fr', 'es')
       required: true,
     },
   },

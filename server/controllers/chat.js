@@ -406,50 +406,48 @@ function mergeMessages(arr1, arr2) {
 const getMessages = TryCatch(async (req, res, next) => {
   const chatId = req.params.id;
   const { page = 1 } = req.query;
-
   const resultPerPage = 20;
   const skip = (page - 1) * resultPerPage;
 
   const chat = await Chat.findById(chatId);
-
   if (!chat) return next(new ErrorHandler("Chat not found", 404));
 
   if (!chat.members.includes(req.user.toString()))
-    return next(
-      new ErrorHandler("You are not allowed to access this chat", 403)
-    );
+    return next(new ErrorHandler("You are not allowed to access this chat", 403));
 
-  const [originalMessages, translatedMessages, totalOriginalMessagesCount, totalTranslatedMessagesCount] = await Promise.all([
-    Message.find({ chat: chatId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(resultPerPage)
-      .populate("sender", "name")
-      .lean(),
-    TranslatedMessage.find({ chat: chatId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(resultPerPage)
-      .populate("sender", "name")
-      .lean(),
-    Message.countDocuments({ chat: chatId }),
-    TranslatedMessage.countDocuments({ chat: chatId }),
-  ]);
+  // Fetch original messages sent by the user
+  const originalMessages = await Message.find({ chat: chatId, sender: req.user })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(resultPerPage)
+    .populate("sender", "name")
+    .lean();
 
-  // Merge original and translated messages maintaining order
-  const messages = mergeMessages(originalMessages, translatedMessages);
+  // Fetch translated messages sent to the user
+  const translatedMessages = await TranslatedMessage.find({ chat: chatId, sender: { $ne: req.user } })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(resultPerPage)
+    .populate("sender", "name")
+    .lean();
 
-  // Calculate total count by adding counts from both collections
-  const totalMessagesCount = totalOriginalMessagesCount + totalTranslatedMessagesCount;
+  // Remove translated messages sent by the user from translatedMessages
+  const filteredTranslatedMessages = translatedMessages.filter(message => message.sender.toString() !== req.user);
 
+  // Merge original messages and filtered translated messages maintaining order
+  const messages = mergeMessages(originalMessages, filteredTranslatedMessages);
+
+  // Calculate total count
+  const totalMessagesCount = originalMessages.length + filteredTranslatedMessages.length;
   const totalPages = Math.ceil(totalMessagesCount / resultPerPage) || 0;
 
   return res.status(200).json({
     success: true,
-    messages: messages.reverse(),
+    messages: messages.reverse(), // Reverse to maintain correct order
     totalPages,
   });
 });
+
 
 
 export {
