@@ -415,6 +415,8 @@ const getMessages = TryCatch(async (req, res, next) => {
   if (!chat.members.includes(req.user.toString()))
     return next(new ErrorHandler("You are not allowed to access this chat", 403));
 
+  const user = await User.findById(req.user);
+  const userLanguage = user.language;
   // Fetch original messages sent by the user
   const originalMessages = await Message.find({ chat: chatId, sender: req.user })
     .sort({ createdAt: -1 })
@@ -424,21 +426,17 @@ const getMessages = TryCatch(async (req, res, next) => {
     .lean();
 
   // Fetch translated messages sent to the user
-  const translatedMessages = await TranslatedMessage.find({ chat: chatId, sender: { $ne: req.user } })
+  const translatedMessages = await TranslatedMessage.find({ chat: chatId, sender: { $ne: req.user }, targetLanguage: userLanguage })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(resultPerPage)
     .populate("sender", "name")
     .lean();
 
-  // Remove translated messages sent by the user from translatedMessages
-  const filteredTranslatedMessages = translatedMessages.filter(message => message.sender.toString() !== req.user);
-
-  // Merge original messages and filtered translated messages maintaining order
-  const messages = mergeMessages(originalMessages, filteredTranslatedMessages);
+  const messages = mergeMessages(originalMessages, translatedMessages);
 
   // Calculate total count
-  const totalMessagesCount = originalMessages.length + filteredTranslatedMessages.length;
+  const totalMessagesCount = originalMessages.length + translatedMessages.length;
   const totalPages = Math.ceil(totalMessagesCount / resultPerPage) || 0;
 
   return res.status(200).json({

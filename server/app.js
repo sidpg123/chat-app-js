@@ -131,25 +131,11 @@ io.on("connection", (socket) => {
 
   socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
     const sourceLanguage = user.language;
-    console.log("source", sourceLanguage);
     const receiverIds = members.filter(member => member !== user._id.toString());
-    console.log("members:", members);
-    console.log("receivers:", receiverIds);
 
-    const receiver = await User.findById(receiverIds)
-    console.log('receiver', receiver);
-    const targetLanguage = receiver.language;
-    console.log('targetLanguage', targetLanguage);
-    // Translate the message if necessary
-    const translatedMessage =  await translateMessage(message, sourceLanguage, targetLanguage)  
-
-    // Get the sender's socket ID
-    console.log("Translated message: ", translatedMessage);
     const senderSocketId = userSocketIDs.get(user._id.toString());
-    console.log("sender id", user._id.toString());
-    console.log("sendersocket ", senderSocketId,);
-    // Emit original message to the sender's socket
 
+    // Emit original message to the sender's socket
     await io.to(senderSocketId).emit(NEW_MESSAGE, {
       chatId,
       message: {
@@ -164,16 +150,14 @@ io.on("connection", (socket) => {
       }
     });
 
-    // Iterate through each member in the conversation
+    // Iterate through each receiver and send translated message
     await Promise.all(receiverIds.map(async (member) => {
-      // Translate the message if necessary
-      console.log('member', member);
+      const receiver = await User.findById(member);
+      const targetLanguage = receiver.language;
+      const translatedMessage = await translateMessage(message, sourceLanguage, targetLanguage);
       const receiverSocketId = member ? userSocketIDs.get(member.toString()) : null;
 
       if (receiverSocketId) {
-        console.log('Sending translated message to receiver:', translatedMessage);
-
-        // Emit translated message to the receiver's socket
         await io.to(receiverSocketId).emit(NEW_MESSAGE, {
           chatId,
           message: {
@@ -190,30 +174,34 @@ io.on("connection", (socket) => {
       } else {
         console.error('Receiver socket ID not available for member:', member);
       }
+
+      try {
+        // Save the translated message to the database for each receiver
+        await TranslatedMessage.create({
+          content: translatedMessage,
+          sender: user._id,
+          chat: chatId,
+          targetLanguage: targetLanguage,
+        });
+      } catch (error) {
+        console.error('Error saving translated message to database:', error);
+      }
     }));
 
-    // Emit a new message alert to all members except the sender
-
-    io.to(getSockets(receiverIds)).emit(NEW_MESSAGE_ALERT, { chatId });
-
+    // Save the original message to the database once (outside the loop)
     try {
-      // Save the original message to the database
-      await TranslatedMessage.create({
-        content: translatedMessage,
-        sender: user._id,
-        chat: chatId,
-        targetLanguage: targetLanguage,
-      });
-
       await Message.create({
         content: message,
         sender: user._id,
         chat: chatId,
       });
     } catch (error) {
-      console.error('Error saving message to database:', error);
+      console.error('Error saving original message to database:', error);
     }
-  });
+
+    // Emit a new message alert to all members except the sender
+    io.to(getSockets(receiverIds)).emit(NEW_MESSAGE_ALERT, { chatId });
+});
 
 
 
