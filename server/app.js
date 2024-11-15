@@ -158,9 +158,10 @@ io.on("connection", (socket) => {
       } catch (err) {
         console.log('Error sending audio data:', err);
       }
-    } else {
-      console.log('No active recognition stream');
-    }
+    } 
+    // else {
+    //   console.log('No active recognition stream');
+    // }
   });
 
   socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
@@ -281,7 +282,7 @@ function startRecognitionStream(socket, languageCode) {
   if(!languageCode){
     languageCode = 'en-IN'
   }
-  console.log("languageCOde in startRecognizaiton", languageCode);
+  // console.log("languageCOde in startRecognizaiton", languageCode);
 
   const request = {
     config: {
@@ -294,7 +295,7 @@ function startRecognitionStream(socket, languageCode) {
     interimResults: true, // Provide real-time results
   };
 
-  console.log("Starting recognition stream...");
+  // console.log("Starting recognition stream...");
   try {
     recognizeStream = client
       .streamingRecognize(request)
@@ -317,10 +318,10 @@ function startRecognitionStream(socket, languageCode) {
           .join("\n");
 
 
-        console.log("Data received:", data);
+        // console.log("Data received:", data);
         // console.log("result", result);
         
-        console.log("Transcription:", transcription);
+        // console.log("Transcription:", transcription);
 
         if (transcription && isFinal) {
           socket.emit("receive_audio_text", { text: transcription, isFinal: isFinal });
@@ -328,7 +329,7 @@ function startRecognitionStream(socket, languageCode) {
 
         // If result is final, handle it but don't necessarily restart the stream
         if (isFinal) {
-          console.log("Final transcription received.");
+          // console.log("Final transcription received.");
           // Optional: Set a short delay before resetting the stream
           timeoutId = setTimeout(() => restartStream(socket), INACTIVITY_TIMEOUT);
         } else {
@@ -343,7 +344,7 @@ function startRecognitionStream(socket, languageCode) {
 
 function stopRecognitionStream() {
   if (recognizeStream) {
-    console.log("Stopping recognition stream...");
+    // console.log("Stopping recognition stream...");
     recognizeStream.end();
     recognizeStream = null;
   }

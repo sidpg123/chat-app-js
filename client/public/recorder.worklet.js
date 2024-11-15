@@ -1,7 +1,7 @@
 class RecorderWorkletProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
-    console.log('RecorderWorkletProcessor initialized');
+    // console.log('RecorderWorkletProcessor initialized');
     // Initialize any state or buffers here
   }
 

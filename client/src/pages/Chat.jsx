@@ -84,7 +84,7 @@ const Chat = ({ chatId, user }) => {
 
   useEffect(() => {
     socket.on('receive_audio_text', (data) => {
-      console.log("data",data)
+      // console.log("data",data)
       dispatch(setCurrentRecognition(data.text));
       setMessage((prevMessage) => prevMessage + ' ' + data.text);
       if (data.isFinal) {
@@ -114,13 +114,13 @@ const Chat = ({ chatId, user }) => {
 
   const loadAudioWorklet = async (mediaStream) => {
     try {
-      console.log("Initializing AudioContext");
+      // console.log("Initializing AudioContext");
       audioContextRef.current = new window.AudioContext({sampleRate: 16000});
   
-      console.log("Loading AudioWorklet module from /recorder.worklet.js");
+      // console.log("Loading AudioWorklet module from /recorder.worklet.js");
       await audioContextRef.current.audioWorklet.addModule('/recorder.worklet.js');
       
-      console.log("Creating AudioWorkletNode");
+      // console.log("Creating AudioWorkletNode");
       processorRef.current = new AudioWorkletNode(audioContextRef.current, 'recorder-worklet');
 
       // Create a MediaStreamAudioSourceNode from the media stream
@@ -138,7 +138,7 @@ const Chat = ({ chatId, user }) => {
         }
       };
   
-      console.log("AudioWorkletNode successfully created and connected without local playback");
+      // console.log("AudioWorkletNode successfully created and connected without local playback");
     } catch (error) {
       console.error('Error loading AudioWorkletModule:', error);
     }
