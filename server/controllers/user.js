@@ -88,7 +88,9 @@ const searchUser = TryCatch(async (req, res) => {
 
   // Finding all users except me and my friends
   const allUsersExceptMeAndFriends = await User.find({
-    _id: { $nin: allUsersFromMyChats },
+    _id: { 
+      $nin: [...allUsersFromMyChats, req.user]  // Exclude both friends and the logged-in user
+    },
     name: { $regex: name, $options: "i" },
   });
 

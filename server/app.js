@@ -9,10 +9,14 @@ import { v4 as uuid } from "uuid";
 import cors from "cors";
 import axios from 'axios'; // Import axios library
 import speech from "@google-cloud/speech"
+import textToSpeech from "@google-cloud/text-to-speech"
 import { v2 as cloudinary } from "cloudinary";
 import {
+  AUDIO_ERROR,
+  AUDIO_GENERATED,
   CHAT_JOINED,
   CHAT_LEAVED,
+  GENERATE_AUDIO,
   NEW_MESSAGE,
   NEW_MESSAGE_ALERT,
   ONLINE_USERS,
@@ -56,6 +60,7 @@ const io = new Server(server, {
   cors: corsOptions,
 });
 const client = new speech.SpeechClient();
+const ttsClient = new textToSpeech.TextToSpeechClient(); 
 app.set("io", io);
 
 // Using Middlewares Here
@@ -142,7 +147,7 @@ io.on("connection", (socket) => {
 
 
   socket.on('endGoogleCloudStream', () => {
-    console.log('Ending Google Cloud stream');
+    // console.log('Ending Google Cloud stream');
     stopRecognitionStream();
   });
 
@@ -163,6 +168,34 @@ io.on("connection", (socket) => {
     //   console.log('No active recognition stream');
     // }
   });
+
+  socket.on("GENERATE_AUDIO", async ({ content }) => {
+
+    languageCode = getGcpLanguageCode(user.language)
+
+    if (!content || typeof content !== 'string' || content.trim() === '') {
+      console.error('Invalid message:', content);
+      socket.emit(AUDIO_ERROR, { error: 'Message is undefined or empty' });
+      return;
+    }
+
+    try {
+      const request = {
+        input: { text: content },
+        voice: { languageCode, ssmlGender: 'NEUTRAL' },
+        audioConfig: { audioEncoding: 'MP3' },
+      };
+
+      const [response] = await ttsClient.synthesizeSpeech(request);
+      const audioContent = response.audioContent.toString('base64');
+      console.log("audioContent",audioContent)
+      socket.emit(AUDIO_GENERATED, { audio: audioContent });
+    } catch (error) {
+      console.error('Error generating audio:', error);
+      socket.emit(AUDIO_ERROR, { error: 'Failed to generate audio' });
+    }
+  });
+
 
   socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
     const sourceLanguage = user.language;
@@ -292,7 +325,7 @@ function startRecognitionStream(socket, languageCode) {
       enableAutomaticPunctuation: true,
       singleUtterance: false, // Switch to true if you'd like to stop on silence
     },
-    interimResults: true, // Provide real-time results
+    interimResults: false, // Provide real-time results
   };
 
   // console.log("Starting recognition stream...");
