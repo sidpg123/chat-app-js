@@ -20,23 +20,6 @@ const MessageComponent = ({ message, user }) => {
 
   const [hovered, setHovered] = useState(false);
 
-
-  // useEffect(() => {
-    // socket.on(AUDIO_GENERATED, ({ audio }) => {
-    //   console.log(audio)
-    //   const audioPlayer = new Audio(`data:audio/mp3;base64,${audio}`);
-    //   audioPlayer.play();
-    // });
-
-    // socket.on(AUDIO_ERROR, ({ error }) => {
-    //   console.error('Error:', error);
-    // });
-
-  //   return () => {
-  //     socket.disconnect();
-  //   };
-  // }, []);
-
   const handleTextToSpeech = (content) => {
     console.log(content)
     socket.emit("GENERATE_AUDIO", {

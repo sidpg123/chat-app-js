@@ -171,7 +171,7 @@ io.on("connection", (socket) => {
 
   socket.on("GENERATE_AUDIO", async ({ content }) => {
 
-    languageCode = getGcpLanguageCode(user.language)
+    languageCode = getGcpLanguageCode(user.language);
 
     if (!content || typeof content !== 'string' || content.trim() === '') {
       console.error('Invalid message:', content);
@@ -188,7 +188,6 @@ io.on("connection", (socket) => {
 
       const [response] = await ttsClient.synthesizeSpeech(request);
       const audioContent = response.audioContent.toString('base64');
-      console.log("audioContent",audioContent)
       socket.emit(AUDIO_GENERATED, { audio: audioContent });
     } catch (error) {
       console.error('Error generating audio:', error);

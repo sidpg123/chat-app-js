@@ -88,7 +88,7 @@ const Header = () => {
                 display: { xs: "none", sm: "block" },
               }}
             >
-              Chat-App
+              TalkBridge
             </Typography>
 
             <Box
